@@ -53,7 +53,6 @@ class Db
 		return $this->connection->query($sql);
 	}
 
-	//write documentation
 	public function update($tbl_name, $old_data, $new_data)
 	{
 		$old_name = $old_data['name'];
