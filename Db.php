@@ -2,9 +2,8 @@
 
 class Db 
 {
-	private $name;
-	private $surname;
-	private $email;
+	private $connection;
+	private $where_condition = '';
 		
 	//create connection
 	function __construct()
@@ -32,45 +31,72 @@ class Db
 		return $text;
 	}
 
-	public function select($sql)
+	public function select($sql, $all = true)
 	{
-		$sql = $this->clear($sql);
-		$result = $this->connection->query($sql);
-		if($result->num_rows == 0)
+		if($all != true)
 		{
-			exit("The table is empty");
+			return $this->connection->query($sql)->fetch_assoc();
 		}
-		return $result->fetch_all();
+		$array = [];
+		$result = $this->connection->query($sql);
+		while($row = $result->fetch_assoc())
+		{
+			$array[] = $row;
+		}
+		return $array;
 	}
 	public function insert($tbl_name, $data)
 	{
-		echo "insert<br>";
-		$name = $data['name'];
-		$surname = $data['surname'];
-		$email = $data['email'];
-		$sql = "INSERT INTO `$tbl_name` (`name`, `surname`, `email`) VALUES ('$name','$surname','$email')";
-		var_dump($sql);
+		$values = implode("','", array_values($data));
+		$values = $this->clear($values);
+		$sql = $this->connection->query("INSERT INTO $tbl_name (" . implode(",", array_keys($data)) . ") VALUES ('" . $values ."')");
+		return $sql;
+	}
+
+	public function update($tbl_name, $new_data)
+	{
+		$set_data = '';
+		foreach($new_data as $key => $value) {  
+			$set_data .= $key . "='".$this->clear($value)."', ";  
+		}
+		$set_data = substr($set_data, 0, -2);
+		$sql = "UPDATE $tbl_name SET $set_data ".$this->where_condition."";
+		$this->where_condition = '';
 		return $this->connection->query($sql);
 	}
 
-	public function update($tbl_name, $old_data, $new_data)
+	public function delete($tbl_name)
 	{
-		$old_name = $old_data['name'];
-		$old_surname = $old_data['surname'];
-		$old_email = $old_data['email'];
-		$new_name = $new_data['name'];
-		$new_surname = $new_data['surname'];
-		$new_email = $new_data['email'];
-		$sql = "UPDATE `$tbl_name` SET `name`='$new_name',`surname`='$new_surname',`email`='$new_email' 
-				WHERE `name`='$old_name' AND `surname`='$old_surname' AND `email`='$old_email'";
+		$sql = "DELETE FROM `$tbl_name` ".$this->where_condition."";
+		$this->where_condition = '';
 		return $this->connection->query($sql);
 	}
-	public function delete($tbl_name, $data)
+
+	public function where($key, $value, $oper = '=')
 	{
-		$name = $data['name'];
-		$surname = $data['surname'];
-		$email = $data['email'];
-		$sql = "DELETE FROM `$tbl_name` WHERE `name`='$name' AND `surname`='$surname' AND `email`='$email'";
-		return $this->connection->query($sql);
+		$this->clear($value);
+		if($this->where_condition != '')
+		{
+			$this->where_condition .= " AND $key $oper '$value'";
+		}
+		else
+		{
+			$this->where_condition = "WHERE $key $oper '$value'";
+		}
+		return $this;
+	}
+
+	public function orWhere($key, $value, $oper = '=')
+	{
+		$this->clear($value);
+		if($this->where_condition != '')
+		{
+			$this->where_condition .= " OR $key $oper '$value'";
+		}
+		else
+		{
+			$this->where_condition = "WHERE $key $oper '$value'";
+		}
+		return $this;
 	}
 }
