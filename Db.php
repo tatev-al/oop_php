@@ -28,6 +28,7 @@ class Db
 		$text = trim($text);
 		$text = stripslashes($text);
 		$text = htmlspecialchars($text);
+		$text = mysqli_real_escape_string($this->connection, $text);
 		return $text;
 	}
 
