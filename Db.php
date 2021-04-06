@@ -1,25 +1,23 @@
 <?php
 
-class Db 
+class Db extends mysqli
 {
-	private $connection;
 	private $where_condition = '';
 		
 	//create connection
 	function __construct()
 	{
 		include "db_config.php";
-		$this->connection = new mysqli($servername, $username, $password, $db_name);
-		if ($this->connection->connect_error) 
-		{
-			die("Connection failed: " . $this->connection->connect_error);
-		}
+		parent::__construct($servername, $username, $password, $db_name);
+		if (mysqli_connect_errno()) {
+            die("Connection failed: " . mysqli_connect_error());
+        }
 	}
 
 	//close connection
 	public function __destruct()
 	{
-		$this->connection->close();
+		parent::close();
 	}
 
 	//clear queries
@@ -28,7 +26,7 @@ class Db
 		$text = trim($text);
 		$text = stripslashes($text);
 		$text = htmlspecialchars($text);
-		$text = $this->connection->real_escape_string($text);
+		$text = parent::real_escape_string($text);
 		return $text;
 	}
 
@@ -36,10 +34,10 @@ class Db
 	{
 		if($all != true)
 		{
-			return $this->connection->query($sql)->fetch_assoc();
+			return parent::query($sql)->fetch_assoc();
 		}
 		$array = [];
-		$result = $this->connection->query($sql);
+		$result = parent::query($sql);
 		while($row = $result->fetch_assoc())
 		{
 			$array[] = $row;
@@ -48,9 +46,12 @@ class Db
 	}
 	public function insert($tbl_name, $data)
 	{
-		$values = implode("','", array_values($data));
-		$values = $this->clear($values);
-		$sql = $this->connection->query("INSERT INTO $tbl_name (" . implode(",", array_keys($data)) . ") VALUES ('" . $values ."')");
+		$values = '';
+		foreach($data as $key => $value) {  
+			$values .= "'".$this->clear($value)."', ";  
+		}
+		$values = substr($values, 0, -2);
+		$sql = parent::query("INSERT INTO $tbl_name (" . implode(",", array_keys($data)) . ") VALUES ($values)");
 		return $sql;
 	}
 
@@ -63,14 +64,14 @@ class Db
 		$set_data = substr($set_data, 0, -2);
 		$sql = "UPDATE $tbl_name SET $set_data ".$this->where_condition."";
 		$this->where_condition = '';
-		return $this->connection->query($sql);
+		return parent::query($sql);
 	}
 
 	public function delete($tbl_name)
 	{
 		$sql = "DELETE FROM `$tbl_name` ".$this->where_condition."";
 		$this->where_condition = '';
-		return $this->connection->query($sql);
+		return parent::query($sql);
 	}
 
 	public function where($key, $value, $oper = '=')
